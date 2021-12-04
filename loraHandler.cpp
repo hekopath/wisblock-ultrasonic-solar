@@ -9,9 +9,7 @@
  * 
  */
 #include "main.h"
-#include <CayenneLPP.h>
-
-CayenneLPP lpp(51);
+#include "config.cpp"
 
 /** DIO1 GPIO pin for RAK4631 */
 #define PIN_LORA_DIO_1 47
@@ -56,18 +54,7 @@ static lmh_param_t lora_param_init = {LORAWAN_ADR_OFF, DR_3, LORAWAN_PUBLIC_NETW
 static lmh_callback_t lora_callbacks = {BoardGetBatteryLevel, BoardGetUniqueId, BoardGetRandomSeed,
                     lorawan_rx_handler, lorawan_has_joined_handler, lorawan_confirm_class_handler};
 
-/** Device EUI required for OTAA network join */
-uint8_t nodeDeviceEUI[8] = {0x03, 0x6D, 0x77, 0x81, 0x2D, 0x7F, 0x30, 0x63};
-/** Application EUI required for network join */
-uint8_t nodeAppEUI[8] = {0x70, 0x13, 0xB4, 0xA9, 0x58, 0x63, 0x4B, 0x80};
-/** Application key required for network join */
-uint8_t nodeAppKey[16] = {0xF7, 0xD0, 0xAD, 0x2C, 0xB2, 0x61, 0x80, 0x9E, 0x78, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-/** Device address required for ABP network join */
-uint32_t nodeDevAddr = 0x26021FB6;
-/** Network session key required for ABP network join */
-uint8_t nodeNwsKey[16] = {0x32, 0x3D, 0x15, 0x5A, 0x00, 0x0D, 0xF3, 0x35, 0x30, 0x7A, 0x16, 0xDA, 0x0C, 0x9D, 0xF5, 0x3F};
-/** Application session key required for ABP network join */
-uint8_t nodeAppsKey[16] = {0x3F, 0x6A, 0x66, 0x45, 0x9D, 0x5E, 0xDC, 0xA6, 0x3C, 0xBC, 0x46, 0x19, 0xCD, 0x61, 0xA1, 0x1E};
+
 
 /** Flag whether to use OTAA or ABP network join method */
 bool doOTAA = true;
@@ -120,9 +107,6 @@ int8_t initLoRaWan(void)
   lmh_setDevEui(nodeDeviceEUI);
   lmh_setAppEui(nodeAppEUI);
   lmh_setAppKey(nodeAppKey);
-  lmh_setNwkSKey(nodeNwsKey);
-  lmh_setAppSKey(nodeAppsKey);
-  lmh_setDevAddr(nodeDevAddr);
 
   // Initialize LoRaWan
   if (lmh_init(&lora_callbacks, lora_param_init, doOTAA) != 0)
@@ -191,10 +175,9 @@ static void lorawan_has_joined_handler(void)
 {
   if (doOTAA)
   {
-    uint32_t otaaDevAddr = lmh_getDevAddr();
-#ifndef MAX_SAVE
-    Serial.printf("OTAA joined and got dev address %08X\n", otaaDevAddr);
-#endif
+    #ifndef MAX_SAVE
+        Serial.printf("OTAA joined and got dev address %08X\n", lmh_getDevAddr());
+    #endif
   }
   else
   {
@@ -305,14 +288,14 @@ static void lorawan_confirm_class_handler(DeviceClass_t Class)
  * 
  * @return result of send request
  */
-bool sendLoRaFrame(float temp, float humidity, float pressure, float soil)
+bool sendLoRaFrame(float Distance float BatteryLevel)
 {
   if (lmh_join_status_get() != LMH_SET)
   {
     //Not joined, try again later
-#ifndef MAX_SAVE
-    Serial.println("Did not join network, skip sending frame");
-#endif
+    #ifndef MAX_SAVE
+        Serial.println("Did not join network, skip sending frame");
+    #endif
     // Send LoRa handler back to sleep
     xSemaphoreTake(loraEvent, 10);
     return false;
@@ -320,18 +303,26 @@ bool sendLoRaFrame(float temp, float humidity, float pressure, float soil)
 
   m_lora_app_data.port = LORAWAN_APP_PORT;
 
-  //******************************************************************
-  /// \todo here some more usefull data should be put into the package
-  //******************************************************************
+  //write temperature in a state we can send it
+  int8_t envDistanceHigh = Distance/255;
+  int8_t envDistanceLow = Distance-(envDistanceHigh*255);
+  //same for battery
+  int8_t envBatteryHigh = BatteryLevel/255;
+  int8_t envBatteryLow = BatteryLevel-(envBatteryHigh*255);
+  int8_t envGasHigh = GasLevel/255;
 
-  lpp.reset();
-  lpp.addTemperature(1,temp);
-  lpp.addRelativeHumidity(2,humidity);
-  lpp.addRelativeHumidity(3,soil);
-  lpp.addBarometricPressure(4,pressure);
+  uint8_t buff[4]; // reserve 9 bytes in memory 
+  
+  buff[0] = envDistanceHigh //high
+  buff[1] = envDistanceLow; //low
+  buff[2] = envBatteryHigh;
+  buff[3] = envBatteryLow;
 
-  memcpy(m_lora_app_data_buffer,lpp.getBuffer(),lpp.getSize());
-  m_lora_app_data.buffsize = lpp.getSize();
+  //copy the buffer we just built into the lora buffer
+  memcpy(m_lora_app_data_buffer,buff,sizeof(buff));
+  m_lora_app_data.buffsize = sizeof(buff);
+
+  //send the uplink
   lmh_error_status error = lmh_send(&m_lora_app_data, LMH_UNCONFIRMED_MSG);
 
   // Send LoRa handler back to sleep
