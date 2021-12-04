@@ -1,4 +1,5 @@
 #include "main.h"
+#include "Arduino.h"
 
 /** Semaphore used by events to wake up loop task */
 SemaphoreHandle_t taskEvent = NULL;
@@ -12,9 +13,6 @@ uint8_t rcvdLoRaData[256];
 uint8_t rcvdDataLen = 0;
 
 #include <Wire.h>
-#include "ClosedCube_BME680.h"
-
-ClosedCube_BME680 bme680;
 
 
 /**
@@ -84,8 +82,7 @@ void setup(void)
 
   // initialize Hygro / Temp sensor
   Wire.begin();     
-  bme680.init(0x76); // I2C address: 0x76 or 0x77
-  bme680.reset();
+ 
   #ifndef MAX_SAVE
   Serial.print("Chip ID=0x");
   Serial.println(bme680.getChipID(), HEX);

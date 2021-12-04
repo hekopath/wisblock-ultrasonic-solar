@@ -1,0 +1,17 @@
+// Helium OTAA device configuration
+//Copy this file to include/config.cpp and change to reflect your Helium sttings
+
+// copy your keys from helium console with 
+// MSB format
+
+//DevEUI
+uint8_t nodeDeviceEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+//AppEUI
+uint8_t nodeAppEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+//AppKey
+uint8_t nodeAppKey[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+
+
+/* Time the device is sleeping in milliseconds = 30 minutes * 60 seconds * 1000 milliseconds */
+#define SLEEP_TIME 30*60*1000
