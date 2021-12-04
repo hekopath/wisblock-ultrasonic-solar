@@ -82,17 +82,7 @@ void setup(void)
 
   // initialize Hygro / Temp sensor
   Wire.begin();     
- 
-  #ifndef MAX_SAVE
-  Serial.print("Chip ID=0x");
-  Serial.println(bme680.getChipID(), HEX);
-  #endif
-  
-  // oversampling: humidity = x1, temperature = x2, pressure = x16
-  bme680.setOversampling(BME680_OVERSAMPLING_X1, BME680_OVERSAMPLING_X2, BME680_OVERSAMPLING_X16);
-  bme680.setIIRFilter(BME680_FILTER_3);
-  bme680.setForcedMode();
-    
+      
   // Initialize LoRaWan and start join request
   int8_t loraInitResult = initLoRaWan();
 
@@ -179,35 +169,9 @@ void loop(void)
 #endif
       // Wake up by timer expiration
 
-      // Read the T et RNH sensor values
-      float Temperature = 0.0, Humidity = 0.0, Pressure = 0.0;
-      ClosedCube_BME680_Status status = bme680.readStatus();
-      if (status.newDataFlag) {
-        Temperature = bme680.readTemperature();
-        Humidity = bme680.readHumidity();
-        Pressure = bme680.readPressure();
-      } else {
-#ifndef MAX_SAVE
-        Serial.printf("Error reading T & H\r\n");        
-#endif
-      }
-      bme680.setForcedMode();
-#ifndef MAX_SAVE
-      Serial.printf("Temperature %f\r\n",Temperature);
-      Serial.printf("Humidity %f\r\n",Humidity);
-      Serial.printf("Pressure %f\r\n",Pressure);
-#endif
-
-      // Read the soil moisture value
-      uint16_t soil = analogRead(A0);
-      if (soil < 640 ) soil = 640;
-      if (soil > 940 ) soil = 940;
-      float HumidySoil = (soil-640) / 3.0;
-#ifndef MAX_SAVE
-        Serial.printf("Soil value %f\r\n",HumidySoil);            
-#endif
+      
       // Send the data packageÒ
-      if (sendLoRaFrame(Temperature, Humidity, Pressure, HumidySoil))
+      if (sendLoRaFrame(Distance, Battery))
       {
 #ifndef MAX_SAVE
         Serial.println("LoRaWan package sent successfully");
